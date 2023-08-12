@@ -8,7 +8,6 @@ library(scales)
 library(DT)
 
 
-
 #Load data -------------------------------------------------------
 
 TrackMan_Data <- data.frame()
@@ -24,6 +23,8 @@ Pitchers_Gulls <- filter(TrackMan_Data, PitcherTeam == "NEW_GUL")
 
 Hitters_Gulls <- filter(TrackMan_Data, BatterTeam == "NEW_GUL")
 
+Catchers_Gulls <- filter(TrackMan_Data, CatcherTeam == "NEW_GUL")
+
 
 
 
@@ -31,24 +32,24 @@ Hitters_Gulls <- filter(TrackMan_Data, BatterTeam == "NEW_GUL")
 
 topKzone = 3.5
 botKzone = 1.6
-inKzone = -.95
-outKzone = 0.95
+inKzone = -.71
+outKzone = 0.71
 kZone = data.frame(
     x = c(inKzone, inKzone, outKzone, outKzone, inKzone)
     , y = c(botKzone, topKzone, topKzone, botKzone, botKzone)
 )
 
-P_Topplate = geom_segment(aes(x=-.95, y=-.2, xend=.95, yend=-.2))
-P_Lplateside = geom_segment(aes(x=-.95, y=-.2, xend=-.95, yend=0))
-P_Rplateside =  geom_segment(aes(x=.95, y=-.2, xend=.95, yend=0))
-P_Lplateback =  geom_segment(aes(x=-.95, y=0, xend=0, yend=.3))
-P_Rplateback = geom_segment(aes(x=.95, y=0, xend=0, yend=.3))
+P_Topplate = geom_segment(aes(x=-.71, y=-.2, xend=.71, yend=-.2))
+P_Lplateside = geom_segment(aes(x=-.71, y=-.2, xend=-.71, yend=0))
+P_Rplateside =  geom_segment(aes(x=.71, y=-.2, xend=.71, yend=0))
+P_Lplateback =  geom_segment(aes(x=-.71, y=0, xend=0, yend=.3))
+P_Rplateback = geom_segment(aes(x=.71, y=0, xend=0, yend=.3))
 
-H_Topplate = geom_segment(aes(x=-.95, y=.3, xend=.95, yend=.3))
-H_Lplateside = geom_segment(aes(x=-.95, y=.3, xend=-.95, yend=.1))
-H_Rplateside =  geom_segment(aes(x=.95, y=.3, xend=.95, yend=.1))
-H_Lplateback =  geom_segment(aes(x=-.95, y=.1, xend=0, yend=-.2))
-H_Rplateback = geom_segment(aes(x=.95, y=.1, xend=0, yend=-.2))
+H_Topplate = geom_segment(aes(x=-.71, y=.3, xend=.71, yend=.3))
+H_Lplateside = geom_segment(aes(x=-.71, y=.3, xend=-.71, yend=.1))
+H_Rplateside =  geom_segment(aes(x=.71, y=.3, xend=.71, yend=.1))
+H_Lplateback =  geom_segment(aes(x=-.71, y=.1, xend=0, yend=-.2))
+H_Rplateback = geom_segment(aes(x=.71, y=.1, xend=0, yend=-.2))
 
 
 
@@ -147,7 +148,7 @@ ui <- navbarPage(
     
     tabPanel("Catchers",
              sidebarPanel(  
-                 selectInput("C_Catcher_select", label = "Catcher", choices = sort(unique(Pitchers_Gulls$Catcher))),
+                 selectInput("C_Catcher_select", label = "Catcher", choices = sort(unique(Catchers_Gulls$Catcher))),
                  
                  
                  radioButtons("C_PitcherHandness_select", label = "Pitcher Handness", choices = list("Both" = "", "LHP" = "Right", "RHP" = "Left")),
@@ -259,7 +260,8 @@ server <- function(input, output, session) {
                              Extension = round(mean(Extension, na.rm = TRUE), 2), 
                              VertBreak = round(mean(VertBreak, na.rm = TRUE), 2), 
                              IVB = round(mean(InducedVertBreak, na.rm = TRUE), 2), 
-                             HorzBreak = round(mean(HorzBreak, na.rm = TRUE), 2),
+                             HBreak = round(mean(HorzBreak, na.rm = TRUE), 2),
+                             VAA = round(mean(VertApprAngle, na.rm = TRUE), 2),
                              SpinAxis = round(mean(SpinAxis, na.rm =TRUE), 0)) %>%
             mutate(Usage = percent(prop.table(NumPitches))) %>%
             relocate(Usage, .after = NumPitches) %>%
@@ -277,11 +279,12 @@ server <- function(input, output, session) {
                             geom_point(aes(x = PlateLocSide, y = PlateLocHeight, color = TaggedPitchType), size = 8, alpha = 0.95) + 
                             geom_path(aes(x,y), data = kZone) + 
                             theme_void() + 
-                            coord_cartesian(xlim = c(-3.5,3.5), ylim = c(0,5)) + 
+                            coord_cartesian(xlim = c(-3,3), ylim = c(-0.5,5))  + 
                             theme(legend.title=element_blank(), legend.position = "bottom", plot.title = element_text( size=25, face="bold", hjust = 0.5), legend.text = element_text(size = 15)) + 
                             guides(col = guide_legend(nrow = 2))+
                             ggtitle("Pitch Type") + 
                             scale_color_manual(values = c(Fastball = "dodgerblue", Slider = "green", ChangeUp = "hotpink", Curveball = "red", Sinker = "orange", Cutter = "chocolate4", Splitter = "purple", Undefined = "darkgrey")) + 
+                            geom_text(aes(x = PlateLocSide, y = PlateLocHeight, label = seq_along(PlateLocSide)), size = 4) +
                             P_Topplate + P_Lplateside + P_Rplateback + P_Lplateback + P_Rplateside, 
                      
                      Pitchers_Gulls %>%
@@ -290,11 +293,12 @@ server <- function(input, output, session) {
                             geom_point(aes(x = PlateLocSide, y = PlateLocHeight, color = PitchCall), size = 8, alpha = 0.95) + 
                             geom_path(aes(x,y), data = kZone) + 
                             theme_void() + 
-                            coord_cartesian(xlim = c(-3.5,3.5), ylim = c(0,5)) + 
+                            coord_cartesian(xlim = c(-3,3), ylim = c(-0.5,5))  + 
                             theme(legend.title=element_blank(), legend.position = "bottom", plot.title = element_text( size=25, face="bold", hjust = 0.5), legend.text = element_text(size = 15)) + 
                             guides(col = guide_legend(nrow = 2))+
                             ggtitle("Pitch Result") + 
                          scale_color_manual(values = c(BallCalled = "dodgerblue", BallinDirt = "chocolate4", FoulBall = "green", InPlay = "red", StrikeCalled = "yellow", StrikeSwinging = "orange", HitByPitch = "purple")) + 
+                           geom_text(aes(x = PlateLocSide, y = PlateLocHeight, label = seq_along(PlateLocSide)), size = 4) +
                             P_Topplate + P_Lplateside + P_Rplateback + P_Lplateback + P_Rplateside, 
                      
                      ncol = 2)
@@ -362,9 +366,9 @@ server <- function(input, output, session) {
         
         Pitchers_Gulls %>%
             filter(Pitcher == input$P_Pitcher_select, BatterSide != input$P_BatterHandness_select, Date %in% c(input$P_Date_select) | BatterTeam %in% c(input$P_Opp_select)) %>%
-            select(c("Date", "BatterTeam", "Batter", "BatterSide", "Balls", "Strikes", "PitchCall", "TaggedPitchType", "RelSpeed", "SpinRate", "Tilt", "Extension", "InducedVertBreak", "HorzBreak", "ExitSpeed", "AutoHitType", "PlayResult")) %>%
-        mutate(RelSpeed = round(RelSpeed, 1), SpinRate = round(SpinRate, 0), Extension = round(Extension, 2), InducedVertBreak = round(InducedVertBreak, 2), HorzBreak = round(HorzBreak, 2), ExitSpeed = round(ExitSpeed, 1)) %>%
-        rename(IVB = InducedVertBreak, Pitch = TaggedPitchType, HitType = AutoHitType, Side = BatterSide, Speed = RelSpeed, Opp = BatterTeam, Side = BatterSide)
+            select(c("Date", "BatterTeam", "Batter", "BatterSide", "Balls", "Strikes", "PitchCall", "TaggedPitchType", "RelSpeed", "SpinRate", "Tilt", "Extension", "InducedVertBreak", "HorzBreak", "VertApprAngle", "ExitSpeed", "AutoHitType", "PlayResult")) %>%
+        mutate(RelSpeed = round(RelSpeed, 1), SpinRate = round(SpinRate, 0), Extension = round(Extension, 2), InducedVertBreak = round(InducedVertBreak, 2), HorzBreak = round(HorzBreak, 2), ExitSpeed = round(ExitSpeed, 1), VertApprAngle = round(VertApprAngle, 2)) %>%
+        rename(IVB = InducedVertBreak, Pitch = TaggedPitchType, HitType = AutoHitType, Side = BatterSide, Speed = RelSpeed, Opp = BatterTeam, Side = BatterSide, VAA = VertApprAngle, HBreak = HorzBreak)
     })
     
     
@@ -392,7 +396,7 @@ server <- function(input, output, session) {
         dplyr::summarise(BallsInPlay = n(),
                          MaxExitVelo = round(max(ExitSpeed, na.rm = TRUE), digits = 1), 
                          AvgExitVelo = round(mean(ExitSpeed, na.rm = TRUE), 1),
-                         HardHit = sum(ExitSpeed >= 95, na.rm = TRUE),
+                         HardHit = sum(ExitSpeed >= 94.99, na.rm = TRUE),
                          BestSpeed = round(mean(sort(ExitSpeed, decreasing = TRUE)[1:ceiling(length(ExitSpeed) / 2)]), 1),
                          MaxDistance = round(max(Distance, na.rm = TRUE), 0), 
                          AvgDistance = round(mean(Distance, na.rm = TRUE), 0), 
@@ -414,11 +418,12 @@ server <- function(input, output, session) {
                         geom_point(aes(x = -PlateLocSide, y = PlateLocHeight, color = AutoPitchType), size = 8, alpha = 0.95) +
                         geom_path(aes(x,y), data = kZone) +
                         theme_void() +
-                        coord_cartesian(xlim = c(-3.5,3.5), ylim = c(0,5)) +
+                        coord_cartesian(xlim = c(-3,3), ylim = c(-0.5,5))  +
                         theme(legend.title=element_blank(), legend.position = "bottom", plot.title = element_text( size=25, face="bold", hjust = 0.5), legend.text = element_text(size = 15)) +
                        guides(col = guide_legend(nrow = 2)) +
                         ggtitle("Pitch Type") +
                         scale_color_manual(values = c(Fastball = "dodgerblue", Slider = "green", ChangeUp = "hotpink", Curveball = "red", Sinker = "orange", Cutter = "chocolate4", Splitter = "purple", Undefined = "darkgrey")) +
+                       geom_text(aes(x = -PlateLocSide, y = PlateLocHeight, label = seq_along(-PlateLocSide)), size = 4) +
                         H_Topplate + H_Lplateside + H_Rplateback + H_Lplateback + H_Rplateside, 
                      
                     Hitters_Gulls %>%
@@ -427,11 +432,12 @@ server <- function(input, output, session) {
                         geom_point(aes(x = -PlateLocSide, y = PlateLocHeight, color = PitchCall), size = 8, alpha = 0.95) +
                         geom_path(aes(x,y), data = kZone) +
                         theme_void() +
-                        coord_cartesian(xlim = c(-3.5,3.5), ylim = c(0,5)) +
+                        coord_cartesian(xlim = c(-3,3), ylim = c(-0.5,5))  +
                         theme(legend.title=element_blank(), legend.position = "bottom", plot.title = element_text( size=25, face="bold", hjust = 0.5), legend.text = element_text(size = 15)) + 
                       guides(col = guide_legend(nrow = 2)) +
                         ggtitle("Pitch Result") +
                         scale_color_manual(values = c(BallCalled = "dodgerblue", BallinDirt = "chocolate4", FoulBall = "green", InPlay = "red", StrikeCalled = "yellow", StrikeSwinging = "orange", HitByPitch = "purple")) +
+                      geom_text(aes(x = -PlateLocSide, y = PlateLocHeight, label = seq_along(-PlateLocSide)), size = 4) +
                         H_Topplate + H_Lplateside + H_Rplateback + H_Lplateback + H_Rplateside, 
                      
                      ncol = 2)
@@ -459,32 +465,32 @@ server <- function(input, output, session) {
     observe({
         
         updateSelectInput(
-            session, "C_Date_select", choices = unique(Pitchers_Gulls$Date),
-            selected = if(input$C_All_select) unique(Pitchers_Gulls$Date)
+            session, "C_Date_select", choices = unique(Catchers_Gulls$Date),
+            selected = if(input$C_All_select) unique(Catchers_Gulls$Date)
         )
     })
     
     output$Catcher_1 <- renderPlot({
         
         grid.arrange(Pitchers_Gulls %>%
-                         filter(BatterSide == "Left", PitchCall == c("StrikeCalled", "BallCalled"), Catcher == input$C_Catcher_select, BatterSide != input$C_PitcherHandness_select, Date %in% c(input$C_Date_select) | BatterTeam %in% c(input$C_Opp_select)) %>%
+                         filter(BatterSide == "Left", PitchCall == "StrikeCalled" | PitchCall == "BallCalled", Catcher == input$C_Catcher_select, BatterSide != input$C_PitcherHandness_select, Date %in% c(input$C_Date_select) | BatterTeam %in% c(input$C_Opp_select)) %>%
                          ggplot() 
                      + geom_point(aes(x = -PlateLocSide, y = PlateLocHeight, color = PitchCall), size = 8, alpha = 0.95)  
                      + geom_path(aes(x,y), data = kZone) 
                      + theme_void() 
-                     + coord_cartesian(xlim = c(-3.5,3.5), ylim = c(0,5)) 
+                     + coord_cartesian(xlim = c(-3,3), ylim = c(-0.5,5)) 
                      + theme(legend.title=element_blank(), legend.position = "bottom", plot.title = element_text( size=25, face="bold", hjust = 0.5), legend.text = element_text(size = 15)) 
                      + ggtitle("LHH") 
                      + scale_color_manual(values = c(BallCalled = "dodgerblue", StrikeCalled = "red")) 
                      + H_Topplate + H_Lplateside + H_Rplateback + H_Lplateback + H_Rplateside, 
                      
                      Pitchers_Gulls %>%
-                         filter(BatterSide == "Right", PitchCall == c("StrikeCalled", "BallCalled"), Catcher == input$C_Catcher_select, BatterSide != input$C_PitcherHandness_select, Date %in% c(input$C_Date_select) | BatterTeam %in% c(input$C_Opp_select)) %>%
+                         filter(BatterSide == "Right", PitchCall == "StrikeCalled" | PitchCall == "BallCalled", Catcher == input$C_Catcher_select, BatterSide != input$C_PitcherHandness_select, Date %in% c(input$C_Date_select) | BatterTeam %in% c(input$C_Opp_select)) %>%
                          ggplot() 
                      + geom_point(aes(x = -PlateLocSide, y = PlateLocHeight, color = PitchCall), size = 8, alpha = 0.95)  
                      + geom_path(aes(x,y), data = kZone) 
                      + theme_void() 
-                     + coord_cartesian(xlim = c(-3.5,3.5), ylim = c(0,5)) 
+                     + coord_cartesian(xlim = c(-3,3), ylim = c(-0.5,5)) 
                      + theme(legend.title=element_blank(), legend.position = "bottom", plot.title = element_text( size=25, face="bold", hjust = 0.5), legend.text = element_text(size = 15)) 
                      + ggtitle("RHH") 
                      + scale_color_manual(values = c(BallCalled = "dodgerblue", StrikeCalled = "red")) 
@@ -502,7 +508,7 @@ server <- function(input, output, session) {
     output$Fastball_Leaderboard <- renderDataTable({
         
         Pitchers_Gulls %>%
-            filter(TaggedPitchType == c("Fastball", "Sinker")) %>%
+            filter(TaggedPitchType == "Fastball" | TaggedPitchType == "Sinker") %>%
             group_by(Pitcher, TaggedPitchType) %>%
             dplyr::summarise(NumPitches = n(), 
                              MaxVelo = round(max(RelSpeed, na.rm = TRUE), digits = 1), 
@@ -512,7 +518,8 @@ server <- function(input, output, session) {
                              Extension = round(mean(Extension, na.rm = TRUE), 2), 
                              VertBreak = round(mean(VertBreak, na.rm = TRUE), 2), 
                              IVB = round(mean(InducedVertBreak, na.rm = TRUE), 2), 
-                             HorzBreak = round(abs(mean(HorzBreak, na.rm = TRUE)), 2)) %>%
+                             HorzBreak = round(abs(mean(HorzBreak, na.rm = TRUE)), 2),
+                             VAA = round(mean(VertApprAngle, na.rm = TRUE), 2)) %>%
             datatable(options = list(paging = FALSE, searching = FALSE))
         
     })
@@ -520,7 +527,7 @@ server <- function(input, output, session) {
     output$BreakingBall_Leaderboard <- renderDataTable({
         
         Pitchers_Gulls %>%
-            filter(TaggedPitchType == c("Slider", "Curveball", "Cutter")) %>%
+            filter(TaggedPitchType == "Slider" | TaggedPitchType == "Curveball" | TaggedPitchType == "Cutter") %>%
             group_by(Pitcher, TaggedPitchType) %>%
             dplyr::summarise(NumPitches = n(), 
                              MaxVelo = round(max(RelSpeed, na.rm = TRUE), digits = 1), 
@@ -530,7 +537,8 @@ server <- function(input, output, session) {
                              Extension = round(mean(Extension, na.rm = TRUE), 2), 
                              VertBreak = round(mean(VertBreak, na.rm = TRUE), 2), 
                              IVB = round(mean(InducedVertBreak, na.rm = TRUE), 2), 
-                             HorzBreak = round(abs(mean(HorzBreak, na.rm = TRUE)), 2)) %>%
+                             HorzBreak = round(abs(mean(HorzBreak, na.rm = TRUE)), 2),
+                             VAA = round(mean(VertApprAngle, na.rm = TRUE), 2),) %>%
             datatable(options = list(paging = FALSE, searching = FALSE))
         
     })
@@ -538,7 +546,7 @@ server <- function(input, output, session) {
     output$OffSpeed_Leaderboard <- renderDataTable({
         
         Pitchers_Gulls %>%
-            filter(TaggedPitchType == c("Splitter", "ChangeUp")) %>%
+            filter(TaggedPitchType == "Splitter" | TaggedPitchType == "ChangeUp") %>%
             group_by(Pitcher, TaggedPitchType) %>%
             dplyr::summarise(NumPitches = n(), 
                              MaxVelo = round(max(RelSpeed, na.rm = TRUE), digits = 1), 
@@ -548,7 +556,8 @@ server <- function(input, output, session) {
                              Extension = round(mean(Extension, na.rm = TRUE), 2), 
                              VertBreak = round(mean(VertBreak, na.rm = TRUE), 2), 
                              IVB = round(mean(InducedVertBreak, na.rm = TRUE), 2), 
-                             HorzBreak = round(abs(mean(HorzBreak, na.rm = TRUE)), 2)) %>%
+                             HorzBreak = round(abs(mean(HorzBreak, na.rm = TRUE)), 2),
+                             VAA = round(mean(VertApprAngle, na.rm = TRUE), 2),) %>%
             datatable(options = list(paging = FALSE, searching = FALSE))
         
     })
@@ -566,7 +575,7 @@ server <- function(input, output, session) {
             dplyr::summarise(BallsInPlay = n(),
                              MaxExitVelo = round(max(ExitSpeed, na.rm = TRUE), digits = 1), 
                              AvgExitVelo = round(mean(ExitSpeed, na.rm = TRUE), 1),
-                             HardHit = sum(ExitSpeed >= 95, na.rm = TRUE),
+                             HardHit = sum(ExitSpeed >= 94.99, na.rm = TRUE),
                              BestSpeed = round(mean(sort(ExitSpeed, decreasing = TRUE)[1:ceiling(length(ExitSpeed) / 2)]), 1),
                              MaxDistance = round(max(Distance, na.rm = TRUE), 0), 
                              AvgDistance = round(mean(Distance, na.rm = TRUE), 0), 
